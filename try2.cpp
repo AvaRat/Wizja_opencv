@@ -27,7 +27,6 @@ int s_trackbar = max_trackbar;
 int p_trackbar = max_trackbar;
 
 /// Function Headers
-void help();
 void Probabilistic_Hough( int, void* );
 
 /**
@@ -38,7 +37,7 @@ int main( int argc, char** argv )
 
 
    // Read the image
-    String imageName("/home/marcel/Obrazy/road.JPG"); // by default
+    String imageName("/home/marcel/Obrazy/road_black.JPG");
     if (argc > 1)
     {
         imageName = argv[1];
