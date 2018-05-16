@@ -1,108 +1,99 @@
-/*
- * main.cpp
- *
- *  Created on: 14 maj 2018
- *      Author: marcel
- */
-
 
 #include"imgproc.hpp"
 #include"core.hpp"
 #include"highgui.hpp"
 #include<iostream>
 
+#define CHECK(x) if(!x.data){	std::cout << "nie ma nic w srodku!!\n"; return -1;}else std::cout<<"ok\n";
+
+
+
+
+
 using namespace std;
 using namespace cv;
 
-/// Global variables
-
-/** General variables */
-Mat src, edges;
-Mat src_gray;
-Mat standard_hough, probabilistic_hough;
-int min_threshold = 50;
-int max_trackbar = 150;
-
-const char* standard_name = "Standard Hough Lines Demo";
-const char* probabilistic_name = "Probabilistic Hough Lines Demo";
-
-int s_trackbar = max_trackbar;
-int p_trackbar = max_trackbar;
-
 /// Function Headers
-void help();
-void Probabilistic_Hough(int, void*);
+void filtr(Mat&, Mat&);
+double get_x_center(Mat &src, Mat &img, int, int);
+
+
+
 
 /**
  * @function main
  */
 int main(int argc, char** argv) {
+	Mat src = imread("/home/marcel/Obrazy/road_black.JPG", IMREAD_COLOR);
+	Mat temp, temp2, temp3, target = src;
+	CHECK(src)
+	cvtColor(src, temp, COLOR_RGB2GRAY);
+	Canny(temp, temp3, 50, 200);
+	namedWindow("after Canny without filter", 0);
+	imshow("after Canny without filter", temp3);
+	double center_without_filter = get_x_center(temp3, target, 100, 0);//niebieski
+	filtr(temp, temp2);
+	CHECK(temp2);
+	Canny(temp2, temp, 50, 200);
+	namedWindow("after Canny with filter", 0);
+	imshow("after Canny with filter", temp);
+	CHECK(temp)
+	double center_with_filter = get_x_center(temp, target, 100, 255); //fioletowy
+	cout <<center_with_filter<<endl;
+	cout << center_without_filter << endl;
+	double difference = center_without_filter-center_with_filter;
+	cout << "difference: " << difference <<endl;
+	if(difference >0)
+		cout << "with filter is on lewft\n";
+	else cout << "with filter is on right\n";
+	namedWindow("after transformations", WINDOW_NORMAL);
+	imshow("after transformations", target);
 
-	// Read the image
-	String imageName("/home/marcel/Obrazy/road.JPG"); // by default
-	if (argc > 1) {
-		imageName = argv[1];
-	}
-	src = imread(imageName, IMREAD_COLOR);
-
-	if (src.empty()) {
-		help();
-		return -1;
-	}
-	/// Pass the image to gray
-	cvtColor(src, src_gray, COLOR_RGB2GRAY);
-
-	/// Apply Canny edge detector
-	Canny(src_gray, edges, 50, 200, 3);
-
-	/// Create Trackbars for Thresholds
-	char thresh_label[50];
-	sprintf(thresh_label, "Thres: %d + input", min_threshold);
-
-	namedWindow(probabilistic_name, 0);
-	createTrackbar(thresh_label, probabilistic_name, &p_trackbar, max_trackbar,
-			Probabilistic_Hough);
-
-	/// Initialize
-	Probabilistic_Hough(0, 0);
 	waitKey(0);
 	return 0;
 }
 
-/**
- * @function help
- * @brief Indications of how to run this program and why is it for
- */
-void help() {
-	printf("\t Hough Transform to detect lines \n ");
-	printf("\t---------------------------------\n ");
-	printf(" Usage: ./HoughLines_Demo <image_name> \n");
-}
-
-/**
- * @function Probabilistic_Hough
- */
-void Probabilistic_Hough(int, void*) {
-
+double get_x_center(Mat &src, Mat &target, int threshold, int color){
 	vector<Vec4i> p_lines;
-	cvtColor(edges, probabilistic_hough, COLOR_GRAY2BGR);
 
-	HoughLinesP(edges, p_lines, 1, CV_PI / 180, min_threshold + p_trackbar, 30,
-			10);
-
-	/// Show the result
-	double width = probabilistic_hough.rows;
-	cout << "szerokosc (piksele): "<< width << endl;
-	size_t i = 0;
-	for (i = 0; i < p_lines.size(); i++) {
+	HoughLinesP(src, p_lines, 1, CV_PI / 180, threshold, 30, 10);
+	double sum_left=0, sum_right=0;
+	double num_left=0, num_right=0;
+	size_t i;
+	for (i = 0; i < p_lines.size(); i++)
+	{
 		Vec4i l = p_lines[i];
-		line(probabilistic_hough, Point(l[0], l[1]), Point(l[2], l[3]),
-				Scalar(255, 0, 0), 3, LINE_AA);
-		//  sum_ex+=l[0];
+		line(target, Point(l[0], l[1]), Point(l[2], l[3]),
+				Scalar(255, 0, color), 3, LINE_AA);
+		double x = (l[0]+l[2])/2;
+		if(x < src.cols/2)
+		{
+			sum_left+=x;
+			num_left++;
+		}else
+		{
+			sum_right+=x;
+			num_right++;
+		}
 	}
+	double avg_x_left = sum_left/num_left;
+	double avg_x_right = sum_right/num_right;
+	double center = (avg_x_left + avg_x_right)/2;
+	line(target, Point(center, target.rows), Point(center, 0),
+			Scalar(255, 0, color), 3, LINE_AA);
 
-	imshow(probabilistic_name, probabilistic_hough);
+	return  center;
 }
+
+
+void filtr(Mat &src, Mat &target){
+	Mat kernel = (Mat_<char>(3,3) << 0,0,0,
+									1,0,-1,
+									0,0,0);
+	filter2D(src, target, -1, kernel);
+}
+
+
 
 
 
