@@ -1,0 +1,307 @@
+//kratki
+#include <iostream>
+#include <opencv2/opencv.hpp>
+#include <cmath>
+
+using namespace std;
+using namespace cv;
+
+struct CurveLine
+{
+    int slope;
+    Point position;
+};
+
+const string trackbarWindowName = "Trackbars";
+int i=4,thresh=50;
+int maxCorners = 10;
+int maxTrackbar = 25;
+int threshLines = 150;
+int minLengthOfLine = 50;
+int lengthXOfLines=10;
+
+Mat binared;
+int visionHeight=400;
+int visionWidth=500;
+
+int camHeight=480;
+int camWidth=640;
+
+void on_trackbar(int,void*);
+void goodFeaturesToTrack_Demo( int, void* );
+string intToStr(int n);
+
+void createTrackbars()
+{
+    createTrackbar("i",trackbarWindowName,&i,20,on_trackbar);
+    createTrackbar("thresh",trackbarWindowName,&thresh,255,on_trackbar);
+    createTrackbar("threshLines",trackbarWindowName,&threshLines,255,on_trackbar);
+    createTrackbar("minLengthOfLine",trackbarWindowName,&minLengthOfLine,255,on_trackbar);
+    createTrackbar("lengthXOfLines",trackbarWindowName,&lengthXOfLines,255,on_trackbar);
+}
+
+Mat makeBinaryImage(Mat image)
+{
+    Mat binared,temp,gray;
+    int odd=2*i+1;
+    GaussianBlur(image, temp, Size( odd, odd ), 0, 0 );
+    cvtColor(temp,gray,COLOR_BGR2GRAY);
+    threshold(gray,binared,thresh,255,THRESH_BINARY);
+    return binared;
+}
+
+int main(int argc, char *argv[])
+{
+    VideoCapture cap(2);
+    Mat frame;
+    namedWindow(trackbarWindowName,CV_WINDOW_NORMAL);
+    createTrackbars();
+    namedWindow("Input",CV_WINDOW_AUTOSIZE);
+
+    while((char)waitKey(1)!='q')
+    {
+        cap>>frame;
+        if(frame.empty())
+            break;
+        binared=makeBinaryImage(frame);
+        imshow("Input",frame);
+        imshow("Binared",binared);
+
+        Mat contour;
+        Mat kernel = (Mat_<char>(3,3) <<  0, 0,  0,
+                                       -1,  1, 0,
+                                        0, 0,  0);
+        filter2D(binared,contour,binared.depth(),kernel);
+
+        Mat lineDetectionArea(binared,Rect(contour.cols/2-visionWidth/2,contour.rows/2-visionHeight/2,visionWidth,visionHeight));
+        Mat result(frame,Rect(contour.cols/2-visionWidth/2,contour.rows/2-visionHeight/2,visionWidth,visionHeight));
+
+        int resolution=60;
+        int sumPixels=0;
+        int 
+        for(int j=0;j<lineDetectionArea.rows/resolution;j++)
+        {
+            for(int i=0; i<lineDetectionArea.cols; i++)
+            {
+                for(int k=0;k<resolution;k++)
+                {
+                    if(lineDetectionArea.at<uchar>(j*resolution+k,i)==255)
+                        sumPixels++;
+                }
+                if(sumPixels!=0)
+                    line(result,Point(i,j*resolution+resolution-1),Point(i,j*resolution+resolution-1-sumPixels),Scalar(0,255,0));
+                sumPixels=0;
+            }
+        }
+
+        imshow("Result",result);
+        imshow("Contour",lineDetectionArea);
+
+    }
+    return 0;
+}
+
+void on_trackbar(int,void*)
+{
+    ;
+}
+
+string intToStr(int n)
+{
+     string tmp;
+     if(n < 0) {
+      tmp = "-";
+      n = -n;
+     }
+     if(n > 9)
+      tmp += intToStr(n / 10);
+     tmp += n % 10 + 48;
+     return tmp;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+____________________________________________________________________________________________________________________________________________________________________________________
+//punkty
+#include <iostream>
+#include <opencv2/opencv.hpp>
+#include <cmath>
+
+using namespace std;
+using namespace cv;
+
+struct CurveLine
+{
+    int slope;
+    Point position;
+};
+
+const string trackbarWindowName = "Trackbars";
+int i=4,thresh=50;
+int maxCorners = 10;
+int maxTrackbar = 25;
+int threshLines = 150;
+int minLengthOfLine = 50;
+int lengthXOfLines=10;
+
+Mat binared;
+int visionHeight=400;
+int visionWidth=500;
+
+void on_trackbar(int,void*);
+void goodFeaturesToTrack_Demo( int, void* );
+string intToStr(int n);
+
+void createTrackbars()
+{
+    createTrackbar("i",trackbarWindowName,&i,20,on_trackbar);
+    createTrackbar("thresh",trackbarWindowName,&thresh,255,on_trackbar);
+    createTrackbar("threshLines",trackbarWindowName,&threshLines,255,on_trackbar);
+    createTrackbar("minLengthOfLine",trackbarWindowName,&minLengthOfLine,255,on_trackbar);
+    createTrackbar("lengthXOfLines",trackbarWindowName,&lengthXOfLines,255,on_trackbar);
+}
+
+Mat makeBinaryImage(Mat image)
+{
+    Mat binared,temp,gray;
+    int odd=2*i+1;
+    GaussianBlur(image, temp, Size( odd, odd ), 0, 0 );
+    cvtColor(temp,gray,COLOR_BGR2GRAY);
+    threshold(gray,binared,thresh,255,THRESH_BINARY);
+    return binared;
+}
+
+int main(int argc, char *argv[])
+{
+    VideoCapture cap(2);
+    Mat frame;
+    namedWindow(trackbarWindowName,CV_WINDOW_NORMAL);
+    createTrackbars();
+    namedWindow("Input",CV_WINDOW_AUTOSIZE);
+
+    while((char)waitKey(1)!='q')
+    {
+        cap>>frame;
+        if(frame.empty())
+            break;
+        binared=makeBinaryImage(frame);
+        imshow("Input",frame);
+        imshow("Binared",binared);
+
+        Mat contour;
+        Mat kernel = (Mat_<char>(3,3) <<  0, 0,  0,
+                                       -1,  1, 0,
+                                        0, 0,  0);
+        filter2D(binared,contour,binared.depth(),kernel);
+        imshow("test",contour);
+
+        /*Canny(binared, contour, threshCanny, threshCanny*3, 3);
+        imshow("Canny",contour);*/
+
+        Mat lineDetectionArea(contour,Rect(contour.cols/2-visionWidth/2,contour.rows/2-visionHeight/2,visionWidth,visionHeight));
+        Mat result(frame,Rect(contour.cols/2-visionWidth/2,contour.rows/2-visionHeight/2,visionWidth,visionHeight));
+        vector<Vec4i> detectedLines;
+        HoughLinesP(lineDetectionArea, detectedLines, 1, CV_PI/180, threshLines, minLengthOfLine, 5 );
+
+        /*
+        Mat curveResult=result.clone();
+        vector<CurveLine> curveLines;
+        for( size_t i = 0; i < detectedLines.size(); i++)
+        {
+            for( size_t j = i+1; j < detectedLines.size(); j++)
+            {
+                Vec4i pointsOfLines1 = detectedLines[i];
+                Vec4i pointsOfLines2 = detectedLines[j];
+                if((abs(pointsOfLines1[0]-pointsOfLines2[0]) < lengthXOfLines))
+                {
+                   int centerOf1X=pointsOfLines1[2]-pointsOfLines1[0];
+                   int centerOf1Y=pointsOfLines1[3]-pointsOfLines1[1];
+                   int centerOf2X=pointsOfLines2[2]-pointsOfLines2[0];
+                   int centerOf2Y=pointsOfLines2[3]-pointsOfLines2[1];
+                   if(centerOf2X != centerOf1X)
+                   {
+                       int slopeC=(centerOf2Y-centerOf1Y)/(centerOf2X-centerOf1X);
+                       if(pointsOfLines1[2] != pointsOfLines1[0])
+                       {
+                           int slopeA=(pointsOfLines1[3]-pointsOfLines1[1])/(pointsOfLines1[2]-pointsOfLines1[0]);
+                           if(pointsOfLines2[2]!=pointsOfLines2[0])
+                           {
+                               int slopeB=(pointsOfLines2[3]-pointsOfLines2[1])/(pointsOfLines2[2]-pointsOfLines2[0]);
+                               if(slopeC>0,9*slopeA && slopeC<1,1*slopeA && slopeC>0,9*slopeB && slopeC<1,1*slopeB)
+                               {
+                                   CurveLine temp;
+                                   temp.slope=slopeC;
+                                   temp.position=Point(centerOf2X-centerOf1X,centerOf2Y-centerOf1Y);
+                                   curveLines.push_back(temp);
+                                }
+
+                           }
+                       }
+
+                   }
+
+                }
+            }
+        }
+
+        for( size_t i = 0; i < curveLines.size(); i++ )
+        {
+            CurveLine temp=curveLines[i];
+            int b=temp.position.y-temp.slope*temp.position.x;
+            Point p1(temp.position.x-2,temp.slope*(temp.position.x-2)+b);
+            Point p2(temp.position.x+2,temp.slope*(temp.position.x+2)+b);
+            line(curveResult,p1,p2,Scalar(0,255,0),2);
+
+        }*/
+
+
+        // Draw points
+        for( size_t i = 0; i < detectedLines.size(); i++ )
+        {
+            Vec4i l = detectedLines[i];
+            line( result, Point(l[2], l[3]), Point(l[2], l[3]), Scalar(0,0,255), 4, LINE_AA);
+            line( result, Point(l[0], l[1]),  Point(l[0], l[1]), Scalar(0,0,255), 4, LINE_AA);
+            string temp=intToStr(i);
+            putText(result,temp,Point(l[2]+2, l[3]+2),FONT_HERSHEY_SIMPLEX,1,Scalar(255,0,0));
+            putText(result,temp,Point(l[0]+2, l[1]+2),FONT_HERSHEY_SIMPLEX,1,Scalar(0,255,0));
+        }
+
+        //string angleStr=intToStr(angle);
+        //putText(result,angleStr,Point(result.cols-80,50),FONT_HERSHEY_SIMPLEX,1,Scalar(0,255,0));
+        imshow("Result",result);
+//        imshow("CurveResult",curveResult);
+
+
+    }
+    return 0;
+}
+
+void on_trackbar(int,void*)
+{
+    ;
+}
+
+string intToStr(int n)
+{
+     string tmp;
+     if(n < 0) {
+      tmp = "-";
+      n = -n;
+     }
+     if(n > 9)
+      tmp += intToStr(n / 10);
+     tmp += n % 10 + 48;
+     return tmp;
+}
+
+
+

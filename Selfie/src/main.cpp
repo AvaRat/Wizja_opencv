@@ -4,16 +4,21 @@
 #include"videoio.hpp"
 #include<iostream>
 #include<cmath>
-#include"this_n_that.hpp"
+#include<string>
+#include "this_n_that.hpp"
+#include"Linesdetected.h"
 
-#define CHECK(x) if(!x.data){	std::cout << "nie ma nic w srodku!!\n"; return -1;}else std::cout<<"ok\n";
+const string trackbar_win = "trackbars_windows";
+int Hough_threshold;
+int sigma_x;
+int sigma_y;
+Mat dest, source_for_Hough;
 
-using namespace std;
-using namespace cv;
 
-/// Function Headers
-void filtr(Mat&, Mat&);
-double get_x_center(Mat &src, Mat &img, int, cl);
+extern const Vec4i colors[7] = {
+		Scalar(255,0,0), Scalar(0,0,255), Scalar(0,255,0),
+		Scalar(0,255,255), Scalar(255,0,210), Scalar(255,255,255), Scalar(0,0,0)
+};
 
 /**
  * @function main
@@ -22,101 +27,106 @@ int main(int argc, char** argv) {
 	Mat src;
 	Mat temp, temp2, temp3, target;
 
-	if (argc == 2) {
-		VideoCapture cap(1);
-		if (!cap.isOpened()) {
-			cout << "nie mozna odczytac z kamery\n";
-			return -1;
-		}
+	if (argc == 2)
+	{
+		if (strcmp(argv[1], "video") == 0) {
 
-		for (;;) {
-			cap >> src;
-			target = src;
+			VideoCapture cap(1);
+			if (!cap.isOpened()) {
+				cout << "nie mozna odczytac z kamery\n";
+				return -1;
+			}
+
+			namedWindow(trackbar_win, 0);
+			trackbars();
+
+			/*
+			 * t = 1000*((double)getTickCount() - t)/getTickFrequency();
+			 */
+			double t = 0;
+			for (;;) {
+				t = (double) getTickCount();
+				for (unsigned i = 0; i < 100; i++) {
+
+					cap >> src;
+					//GaussianBlur(src, src, Size(2, 2), sigma_x, sigma_y);
+					filtr(src, src);
+					target = src;
+					cvtColor(src, temp, COLOR_RGB2GRAY);
+					Canny(temp, temp3, 50, 200);
+					namedWindow("after Canny without filter", 0);
+					imshow("after Canny without filter", temp3);
+					get_x_center(temp3, target, Hough_threshold, blue);
+					namedWindow("after transformations", WINDOW_NORMAL);
+					imshow("after transformations", target);
+					if (waitKey(30) >= 0)
+						return 0;
+				}
+				t = (((double) getTickCount() - t) / getTickFrequency()) / 100;	//duration of 100 frames
+				cout << "\t\tfps: " << 1 / t << endl;
+			}
+			return 0;
+			//end if video
+		} else if (strcmp(argv[1], "photo") == 0)
+		{
+			const char* filename = "/home/marcel/Obrazy/road_black.JPG";
+			cout << "ok\n";
+			src = imread(filename, IMREAD_COLOR);
+			if (!src.data)
+				cout << "reading error\n";
+			namedWindow(trackbar_win, 0);
+			dest = src;
+			cvtColor(src, temp, COLOR_RGB2GRAY);
+			filtr(temp, temp);
+			Canny(temp, temp3, 50, 200);
+			source_for_Hough = temp3;
+			namedWindow("after Hough", 0);
+			namedWindow("after Canny with filter", 0);
+			imshow("after Canny with filter", temp3);
+			get_x_center(temp3, dest, Hough_threshold, blue); //niebieski
+
+			namedWindow("after transformations", WINDOW_NORMAL);
+			imshow("after transformations", dest);
+			waitKey(0);
+			//end if photo
+			return 0;
+		} else if (strcmp(argv[1], "test") == 0) {
+
+			vector<Vec4i>lines;
+			const char* filename = "/home/marcel/Obrazy/road_black.JPG";
+			cout << "\t\t***test mode***\n";
+			src = imread(filename, IMREAD_COLOR);
+			filtr(src, src);
 			cvtColor(src, temp, COLOR_RGB2GRAY);
 			Canny(temp, temp3, 50, 200);
-			namedWindow("after Canny without filter", 0);
-			imshow("after Canny without filter", temp3);
-			get_x_center(temp3, target, 100, blue); //niebieski
-			namedWindow("after transformations", WINDOW_NORMAL);
-			imshow("after transformations", target);
-			if (waitKey(30) >= 0)
-				break;
+			get_x_center(temp3, dest, Hough_threshold, red, &lines);
+			cout << lines.size() << endl;
+			Lines_detected l_det(lines);
+			double t = getTickCount();
+				//l_det.display();
+			l_det.sort();
+				//l_det.display();
+			t = (((double) getTickCount() - t) / getTickFrequency());
+			cout << t << endl;
+
+
+			return 0;
 		}
-		return 0;
-		//end if video
-	} else {
-		const char* filename = "/home/marcel/Obrazy/road_black.JPG";
-		cout << "ok\n";
-		src = imread(filename, IMREAD_COLOR);
-		if (!src.data)
-			cout << "reading error\n";
-		target = src;
-		cvtColor(src, temp, COLOR_RGB2GRAY);
-		Canny(temp, temp3, 50, 200);
-		namedWindow("after Canny without filter", 0);
-		imshow("after Canny without filter", temp3);
-		get_x_center(temp3, target, 100, blue); //niebieski
-
-		namedWindow("after transformations", WINDOW_NORMAL);
-		imshow("after transformations", target);
-		waitKey(0);
-		//end if photo
-		return 0;
-	}
-
-}
-
-double get_x_center(Mat &src, Mat &target, int threshold, cl color) {
-	vector<Vec4i> p_lines;
-
-	HoughLinesP(src, p_lines, 1, CV_PI / 180, threshold, 30, 10);
-	double sum_left = 0, sum_right = 0;
-	double num_left = 0, num_right = 0;
-	size_t i;
-	double longest_line = 0;
-	double line_len = 0;
-	double longest_line_nr;
-	for (i = 0; i < p_lines.size(); i++)
+	}else	//argc !=2
 	{
-		Vec4i l = p_lines[i];
-		line_len = sqrt(pow((l[0] - l[2]), 2) + pow((l[1] - l[3]), 2));
-		if (line_len > longest_line)
-		{
-			longest_line = line_len;
-			longest_line_nr = i;
-		}
-		line(target, Point(l[0], l[1]), Point(l[2], l[3]), colors[color], 3,
-				LINE_AA);
-		double x = (l[0] + l[2]) / 2;
-		if (x < src.cols / 2)
-		{
-			sum_left += x;
-			num_left++;
-		} else
-		{
-			sum_right += x;
-			num_right++;
-		}
-	}
-	double avg_x_left = sum_left / num_left;
-	double avg_x_right = sum_right / num_right;
-	double center = (avg_x_left + avg_x_right) / 2;
-	line(target, Point(center, target.rows), Point(center, 0), colors[red], 10,
-			LINE_AA);
-	if(longest_line_nr > p_lines.size())
-	{
-	//	cout << "nie ma takiej lini!!\nlongest_line_nr jest zbyt duze!!\n";
-		return -1;
-	}
-	Vec4i l = p_lines[longest_line_nr];
-		line(target, Point(l[0], l[1]), Point(l[2], l[3]), colors[yellow], 20,
-			LINE_AA);
 
-	return center;
+
+	}
 }
 
-void filtr(Mat &src, Mat &target) {
-	Mat kernel = (Mat_<char>(3, 3) << 0, 0, 0, 1, 0, -1, 0, 0, 0);
-	filter2D(src, target, -1, kernel);
+
+void trackbars()
+{
+	createTrackbar("Hough_threshold", trackbar_win, &Hough_threshold, 255);
+	createTrackbar("sigma_x", trackbar_win, &sigma_x, 10);
+	createTrackbar("sigma_y", trackbar_win, &sigma_y, 10);
+
 }
+
+//int createTrackbar(const string& trackbarname, const string& winname, int* value, int count, TrackbarCallback onChange=0, void* userdata=0)
 
